@@ -1,0 +1,19 @@
+
+# Local/dev
+.idea/
+.venv/
+data/
+
+# Python
+__pycache__/
+*.pyc
+
+# MLflow local artifacts
+mlruns/
+mlartifacts/
+mlflow/*/mlruns/
+mlflow/*/mlartifacts/
+
+# Feast artifacts
+feature_store/data/registry.db
+feature_store/.feast/
