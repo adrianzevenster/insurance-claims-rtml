@@ -60,10 +60,6 @@ def feast_materialize_incremental(feast_repo: str, lookback_minutes: int) -> Non
 
 
 def spark_train(project_dir: str) -> None:
-    """
-    Submit the Spark training job from inside the spark-master container.
-    Requires /var/run/docker.sock mounted into the orchestrator container.
-    """
     run(
         [
             "bash",
@@ -105,23 +101,19 @@ def main() -> None:
     train_hour = int(env("TRAIN_AT_UTC_HOUR", "2"))
     train_minute = int(env("TRAIN_AT_UTC_MINUTE", "0"))
 
-    # In this setup, project_dir is the same mount as FEAST_REPO
     project_dir = feast_repo
 
-    # Basic dependency waits (ports) - match your compose service names
     wait_for_tcp("redis", 6379, 240)
     wait_for_tcp("mlflow", 5000, 240)
     wait_for_tcp("kafka", 9092, 240)
     wait_for_tcp("spark-master", 7077, 240)
 
-    # One-time init sequence
     print("\n=== INIT: feast apply + initial materialize ===", flush=True)
     feast_apply(feast_repo)
     feast_materialize_incremental(feast_repo, lookback)
 
     scheduler = BlockingScheduler(timezone=timezone.utc)
 
-    # Periodic refresh into Redis online store
     scheduler.add_job(
         func=lambda: feast_materialize_incremental(feast_repo, lookback),
         trigger=IntervalTrigger(minutes=materialize_every),
@@ -132,7 +124,6 @@ def main() -> None:
         misfire_grace_time=300,
     )
 
-    # Nightly training + promote
     def train_and_promote():
         print("\n=== TRAIN: spark submit ===", flush=True)
         spark_train(project_dir)
